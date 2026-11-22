@@ -1,0 +1,73 @@
+{
+  "name": "auto-anti-slop",
+  "version": "0.0.1",
+  "description": "Oxlint preset that catches AI-agent slop: strict type safety, complexity limits, anti-slop rules, and lint hooks for Claude Code, Codex and Cursor.",
+  "keywords": [
+    "agents",
+    "ai",
+    "claude-code",
+    "codex",
+    "cursor",
+    "lint",
+    "linter",
+    "oxlint",
+    "oxlint-config",
+    "slop"
+  ],
+  "homepage": "https://github.com/jagreehal/auto-anti-slop#readme",
+  "bugs": "https://github.com/jagreehal/auto-anti-slop/issues",
+  "license": "Apache-2.0",
+  "author": "Jag Reehal",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jagreehal/auto-anti-slop.git"
+  },
+  "bin": "./bin/setup.js",
+  "files": [
+    "bin",
+    "hooks",
+    "index.js",
+    "index.d.ts",
+    "anti-slop",
+    "!anti-slop/**/*.test.js",
+    "docs",
+    "NOTICE.md",
+    "skills/migrate-oxlint-config/SKILL.md"
+  ],
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "scripts": {
+    "changeset": "changeset",
+    "prepare": "vp config --no-agent",
+    "release": "vp check && vp test && changeset publish",
+    "test": "vp test",
+    "version-packages": "changeset version && vp fmt CHANGELOG.md && pnpm install --lockfile-only"
+  },
+  "dependencies": {
+    "eslint-plugin-no-only-tests": "3.4.0",
+    "eslint-plugin-sonarjs": "4.2.2"
+  },
+  "devDependencies": {
+    "@changesets/cli": "3.0.3",
+    "oxlint": "^1.94.0",
+    "tsrs": "7.1.0-beta.tsrs4",
+    "vite-plus": "^1.7.0"
+  },
+  "peerDependencies": {
+    "oxlint": "^1.94.0",
+    "tsrs": ">=7.1.0-beta.tsrs4"
+  },
+  "engines": {
+    "node": ">=24.0.0"
+  },
+  "packageManager": "pnpm@12.21.0"
+}
