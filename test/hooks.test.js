@@ -342,7 +342,7 @@ describe.concurrent('setup and hook', () => {
     await project.write('extra.js', 'export default {};\n');
     await project.write('oxlint-suppressions.json', baselineOf(1));
 
-    const setupDuringWrite = async (file, content, problem = 'oxlint.config.ts: changed') => {
+    const setupDuringChange = async (change, problem = 'oxlint.config.ts: changed') => {
       const child = spawn(process.execPath, [setupScript, '--baseline'], {
         cwd: project.dir,
         env: { ...process.env, VP_VERSION: undefined },
@@ -353,7 +353,7 @@ describe.concurrent('setup and hook', () => {
       child.stderr.on('data', (data) => (stderr += data));
       child.stdout.on('data', (data) => {
         if (String(data).includes('recording existing findings')) {
-          written = project.write(file, content);
+          written = change();
         }
       });
       expect(await once(child, 'close')).toEqual([1, null]);
@@ -361,6 +361,9 @@ describe.concurrent('setup and hook', () => {
       expect(stderr).toContain(`${problem} during setup`);
       expect(await project.read('oxlint-suppressions.json')).toBe(baselineOf(1));
     };
+
+    const setupDuringWrite = (file, content, problem) =>
+      setupDuringChange(() => project.write(file, content), problem);
 
     // Nested configs count too, including in hidden directories.
     const nested = join('.nested', 'oxlint.config.ts');
@@ -372,6 +375,23 @@ describe.concurrent('setup and hook', () => {
     );
     await setupDuringWrite('.nested/extra.js', "export default 'off';\n", `${nested}: changed`);
     await setupDuringWrite(nested, 'export default {};\n', `${nested}: changed`);
+    // A directory that appears during the scan counts, and so does a config rewritten unchanged.
+    const later = join('later', '.oxlintrc.json');
+    await setupDuringChange(async () => {
+      await mkdir(join(project.dir, 'later'));
+      await project.write('later/bad.js', 'eval("1 + 2");\n');
+      await project.write(later, '{}');
+    }, `${later}: created`);
+    await setupDuringWrite('oxlint.config.ts', await project.read('oxlint.config.ts'));
+
+    // Oxlint loads configs in dependencies that git doesn't ignore.
+    const dependency = join('node_modules', 'dep', '.oxlintrc.json');
+    await mkdir(join(project.dir, 'node_modules/dep'));
+    await project.write('node_modules/dep/index.js', 'export {};\n');
+    await project.write(dependency, '{}');
+    await setupDuringWrite(dependency, '{"rules":{}}', `${dependency}: changed`);
+    await rm(join(project.dir, 'node_modules/dep'), { recursive: true });
+
     // A nested config lints files that the root config ignores.
     await mkdir(join(project.dir, 'new'));
     await project.write('new/bad.js', 'eval("1 + 2");\n');
@@ -493,6 +513,49 @@ export default { ...preset, rules };
 
     await record();
     await record('--baseline');
+  });
+
+  test('setup records a baseline on a filesystem without hard links', async ({
+    onTestFinished,
+  }) => {
+    const project = await createProject(onTestFinished);
+    await project.write('bad.js', 'eval("1 + 2");\n');
+
+    const preload = `import fs from 'node:fs';
+      import { syncBuiltinESMExports } from 'node:module';
+      fs.linkSync = () => { throw Object.assign(new Error('no hard links'), { code: 'EPERM' }); };
+      syncBuiltinESMExports();`;
+
+    const setup = await run(
+      process.execPath,
+      ['--import', `data:text/javascript,${encodeURIComponent(preload)}`, setupScript],
+      { cwd: project.dir },
+    );
+
+    expect(setup.status, setup.stderr).toBe(0);
+    expect(await project.json('oxlint-suppressions.json')).toEqual({
+      'bad.js': { 'no-eval': { count: 1 } },
+    });
+  });
+
+  test('a baseline linked into a read-only directory is rewritten in place', async ({
+    onTestFinished,
+  }) => {
+    const project = await createProject(onTestFinished);
+    const shared = join(project.dir, 'shared');
+    await project.setup();
+    await project.write('bad.js', 'eval("1 + 2");\n');
+    await mkdir(shared);
+    await project.write('shared/base.json', baselineOf(1));
+    await symlink('shared/base.json', join(project.dir, 'oxlint-suppressions.json'));
+    await chmod(shared, 0o555);
+    onTestFinished(() => chmod(shared, 0o755));
+
+    const setup = await project.setup('--baseline');
+    expect(setup.status, setup.stderr).toBe(0);
+    expect(await project.json('shared/base.json')).toEqual({
+      'bad.js': { 'no-eval': { count: 1 } },
+    });
   });
 
   test('replacing a baseline keeps its permissions and symlink', async ({ onTestFinished }) => {
