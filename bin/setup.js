@@ -8,16 +8,17 @@
 // existing files and settings. When it creates the config, it records the project's current
 // findings in oxlint-suppressions.json, unless that file exists. --baseline records them again.
 
-import { spawn, spawnSync } from 'node:child_process';
+import { execFile, spawn, spawnSync } from 'node:child_process';
 import {
   appendFileSync,
   cpSync,
   existsSync,
   mkdirSync,
   readFileSync,
+  statSync,
   writeFileSync,
 } from 'node:fs';
-import { constants } from 'node:os';
+import { availableParallelism, constants } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
@@ -86,30 +87,51 @@ const findConfig = () => configs.find((file) => existsSync(file));
 
 const oxlint = fileURLToPath(new URL('bin/oxlint', import.meta.resolve('oxlint/package.json')));
 
-// Resolve the config as well as reading it, because it can import other files.
+// Resolve the config as well as reading it, because it can import other files. The modified time
+// shows a config rewritten with the same content.
 function readConfig(file, ...args) {
-  const printed = spawnSync(process.execPath, [oxlint, '--print-config', ...args], {
-    encoding: 'utf8',
-  });
+  return new Promise((resolve) => {
+    execFile(
+      process.execPath,
+      [oxlint, '--print-config', ...args],
+      { maxBuffer: Infinity },
+      (error, resolved) => {
+        const modified = statSync(file, { throwIfNoEntry: false })?.mtimeMs;
 
-  return { file, resolved: printed.stdout, source: readFileSync(file, 'utf8') };
+        resolve({ file, modified, resolved, source: readFileSync(file, 'utf8') });
+      },
+    );
+  });
 }
 
-function readRootConfig() {
+async function readRootConfig() {
   const file = findConfig();
 
   return file === undefined ? undefined : readConfig(file);
 }
 
-const readNestedConfigs = (dirs) =>
-  new Map(
-    dirs
-      .flatMap((dir) => configs.map((name) => join(dir, name)))
-      .filter((file) => existsSync(file))
-      .map((file) => [file, readConfig(file, '-c', file)]),
-  );
+async function readNestedConfigs(dirs) {
+  const read = new Map();
 
-const config = readRootConfig();
+  const files = dirs
+    .flatMap((dir) => configs.map((name) => join(dir, name)))
+    .filter((file) => existsSync(file));
+
+  const readNext = async () => {
+    const file = files.pop();
+
+    if (file !== undefined) {
+      read.set(file, await readConfig(file, '-c', file));
+      await readNext();
+    }
+  };
+
+  await Promise.all(Array.from({ length: availableParallelism() }, () => readNext()));
+
+  return read;
+}
+
+const config = await readRootConfig();
 const existing = config?.file;
 
 // An existing config without the preset would lint, and baseline, without its rules. Require the
@@ -171,7 +193,8 @@ const scope = existing === undefined ? generatedScope : [];
 // them. A config's own ignorePatterns don't count, because a nested config overrides the root's.
 function findNestedDirectories(scratch) {
   const empty = join(scratch, 'empty.json');
-  const args = ['--debug=files', '--disable-nested-config', '-c', empty, ...generatedScope];
+  const listScope = existing === undefined ? generatedScope : ['--no-error-on-unmatched-pattern'];
+  const args = ['--debug=files', '--disable-nested-config', '-c', empty, ...listScope];
   writeFileSync(empty, '{}');
 
   const listed = spawnSync(process.execPath, [oxlint, ...args, process.cwd()], {
@@ -229,9 +252,10 @@ function stopIfConfigChanged(before, current) {
   }
 }
 
-function stopIfAnyConfigChanged(dirs, nested) {
-  stopIfConfigChanged(config, readRootConfig());
-  const current = readNestedConfigs(dirs);
+// Lists the directories again, to include any created since.
+async function stopIfAnyConfigChanged(scratch, nested) {
+  stopIfConfigChanged(config, await readRootConfig());
+  const current = await readNestedConfigs(findNestedDirectories(scratch));
 
   for (const file of new Set([...nested.keys(), ...current.keys()])) {
     stopIfConfigChanged(nested.get(file), current.get(file));
@@ -256,12 +280,11 @@ async function recordBaseline() {
   let result;
 
   try {
-    const dirs = findNestedDirectories(scratch);
-    const nested = readNestedConfigs(dirs);
+    const nested = await readNestedConfigs(findNestedDirectories(scratch));
     const reporting = report(scratch);
     console.log(`${baseline}: recording existing findings`);
     result = await reporting;
-    stopIfAnyConfigChanged(dirs, nested);
+    await stopIfAnyConfigChanged(scratch, nested);
 
     const { entries, unrecordable } = parseReport(result, process.cwd());
 
@@ -296,7 +319,7 @@ if (firstSetup || replace) {
 }
 
 if (existing === undefined) {
-  stopIfConfigChanged(config, readRootConfig());
+  stopIfConfigChanged(config, await readRootConfig());
   // Fails rather than replace a config that has appeared since.
   writeFileSync('oxlint.config.ts', defaultConfig, { flag: 'wx' });
   console.log('oxlint.config.ts: created');

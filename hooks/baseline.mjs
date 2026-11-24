@@ -9,6 +9,7 @@ import {
   accessSync,
   chmodSync,
   constants,
+  copyFileSync,
   linkSync,
   lstatSync,
   mkdtempSync,
@@ -117,13 +118,18 @@ function destination(path) {
     : real;
 }
 
+function serialize(entries) {
+  const files = Object.entries(entries).map(([file, rules]) => [file, sorted(rules)]);
+
+  return JSON.stringify(sorted(Object.fromEntries(files)), null, 2);
+}
+
 function writeComplete(target, scratch, entries) {
   // A link or rename can't cross filesystems, so start beside the file a symlink leads to.
   const beside = dirname(target) === realpathSync(dirname(scratch));
   const complete = join(beside ? scratch : createScratch(dirname(target)), baseline);
-  const files = Object.entries(entries).map(([file, rules]) => [file, sorted(rules)]);
 
-  writeFileSync(complete, JSON.stringify(sorted(Object.fromEntries(files)), null, 2));
+  writeFileSync(complete, serialize(entries));
 
   return complete;
 }
@@ -131,13 +137,23 @@ function writeComplete(target, scratch, entries) {
 /** Create the project's baseline in one step. Throws EEXIST if there is one. */
 export function createBaseline(root, scratch, entries) {
   const target = destination(join(root, baseline));
+  const complete = writeComplete(target, scratch, entries);
 
-  linkSync(writeComplete(target, scratch, entries), target);
+  try {
+    linkSync(complete, target);
+  } catch (error) {
+    if (error.code === 'EEXIST') {
+      throw error;
+    }
+
+    // A filesystem without hard links: copy, and still keep a file that is already there.
+    copyFileSync(complete, target, constants.COPYFILE_EXCL);
+  }
 }
 
 /**
- * Replace the project's baseline in one step, keeping its permissions, or the file it links to if
- * it's a symlink. Throws if it is read-only.
+ * Replace the project's baseline, in one step where its directory allows, keeping its permissions,
+ * or the file it links to if it's a symlink. Throws if it is read-only.
  */
 export function publishBaseline(root, scratch, entries) {
   const target = destination(join(root, baseline));
@@ -147,7 +163,20 @@ export function publishBaseline(root, scratch, entries) {
     accessSync(target, constants.W_OK);
   }
 
-  const complete = writeComplete(target, scratch, entries);
+  let complete;
+
+  try {
+    complete = writeComplete(target, scratch, entries);
+  } catch (error) {
+    if (replaced === undefined || error.code !== 'EACCES') {
+      throw error;
+    }
+
+    // A writable file in a read-only directory: write it in place, as Oxlint does.
+    writeFileSync(target, serialize(entries));
+
+    return;
+  }
 
   if (replaced !== undefined) {
     chmodSync(complete, replaced.mode);
