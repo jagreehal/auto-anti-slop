@@ -5,13 +5,14 @@
 // Oxlint reports, and we write the baseline from its report. One step publishes the finished file,
 // so an interrupted run keeps the previous baseline.
 
+import { spawnSync } from 'node:child_process';
 import {
   accessSync,
-  chmodSync,
   constants,
   copyFileSync,
   linkSync,
   lstatSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readlinkSync,
@@ -40,6 +41,55 @@ export function createScratch(root) {
   writeFileSync(join(scratch, '.gitignore'), '*\n');
 
   return scratch;
+}
+
+/**
+ * Throws unless this Oxlint, run as the scans are, reports a finding that a baseline in the
+ * project records, and gives plugins the project as `context.cwd`. A scan that applied the
+ * project's baseline would record too little.
+ */
+export function checkScan(oxlint, scratch) {
+  const project = join(scratch, 'check');
+  const cwd = join(project, '.oxlint-baseline-check');
+  const file = join(project, 'check.js');
+
+  mkdirSync(cwd, { recursive: true });
+  writeFileSync(file, 'eval("");\n');
+  writeFileSync(join(project, baseline), '{"check.js":{"no-eval":{"count":1}}}');
+  writeFileSync(
+    join(project, 'plugin.mjs'),
+    `export default {
+  meta: { name: 'check' },
+  rules: {
+    cwd: {
+      create: (context) => ({
+        Program(node) {
+          context.report({ message: context.cwd === ${JSON.stringify(realpathSync(project))} ? 'same-cwd' : 'other-cwd', node });
+        },
+      }),
+    },
+  },
+};
+`,
+  );
+  writeFileSync(
+    join(project, 'oxlint.config.ts'),
+    "export default { jsPlugins: ['./plugin.mjs'], rules: { 'check/cwd': 'error', 'no-eval': 'error' } };\n",
+  );
+
+  // The scratch directory is ignored, so name the file and lint it regardless.
+  const args = [...inProject, oxlint, '--format=json', '--no-ignore', file];
+  const { stdout } = spawnSync(process.execPath, args, { cwd, encoding: 'utf8' });
+
+  const problem =
+    (!String(stdout).includes('no-eval') && `applies ${baseline} to the scan`) ||
+    (!String(stdout).includes('same-cwd') && "gives plugins the scan's directory as context.cwd");
+
+  if (problem) {
+    throw new Error(
+      `This Oxlint version ${problem}. Upgrade auto-anti-slop, or use the Oxlint version it was tested with.`,
+    );
+  }
 }
 
 /** The baseline's name for the rule behind an error, or undefined if it can't record the error. */
@@ -151,9 +201,51 @@ export function createBaseline(root, scratch, entries) {
   }
 }
 
+// A new file in its place would drop a baseline's other hard links, or another user's ownership.
+const isShared = ({ nlink, uid }) => nlink > 1 || uid !== (process.getuid?.() ?? uid);
+
+/** Give a copy the target's mode and ACLs. False if it can't have them. */
+function copyAttributes({ complete, entries, target }) {
+  // `cp -p` keeps ACLs, which Node can't read. Without it, as on Windows, write in place.
+  if (spawnSync('cp', ['-p', target, complete]).status !== 0) {
+    return false;
+  }
+
+  writeFileSync(complete, serialize(entries));
+
+  return true;
+}
+
+/** A finished copy to rename over the target, or undefined if the target is written in place. */
+function prepare({ entries, replaced, scratch, target }) {
+  if (replaced === undefined) {
+    return writeComplete(target, scratch, entries);
+  }
+
+  if (isShared(replaced)) {
+    return undefined;
+  }
+
+  let complete;
+
+  try {
+    complete = writeComplete(target, scratch, entries);
+  } catch (error) {
+    // A writable file in a read-only directory.
+    if (error.code === 'EACCES') {
+      return undefined;
+    }
+
+    throw error;
+  }
+
+  return copyAttributes({ complete, entries, target }) ? complete : undefined;
+}
+
 /**
- * Replace the project's baseline, in one step where its directory allows, keeping its permissions,
- * or the file it links to if it's a symlink. Throws if it is read-only.
+ * Replace the project's baseline, keeping its permissions, or the file it links to if it's a
+ * symlink. One step, unless only a write in place keeps its links, owner or ACLs, or its
+ * directory is read-only. Throws if the baseline is read-only.
  */
 export function publishBaseline(root, scratch, entries) {
   const target = destination(join(root, baseline));
@@ -163,23 +255,12 @@ export function publishBaseline(root, scratch, entries) {
     accessSync(target, constants.W_OK);
   }
 
-  let complete;
+  const complete = prepare({ entries, replaced, scratch, target });
 
-  try {
-    complete = writeComplete(target, scratch, entries);
-  } catch (error) {
-    if (replaced === undefined || error.code !== 'EACCES') {
-      throw error;
-    }
-
-    // A writable file in a read-only directory: write it in place, as Oxlint does.
+  if (complete === undefined) {
     writeFileSync(target, serialize(entries));
 
     return;
-  }
-
-  if (replaced !== undefined) {
-    chmodSync(complete, replaced.mode);
   }
 
   renameSync(complete, target);

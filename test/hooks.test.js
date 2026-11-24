@@ -6,6 +6,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import {
   chmod,
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -16,7 +17,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import { setTimeout } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, test } from 'vite-plus/test';
@@ -30,6 +31,10 @@ const baselineOf = (count) => JSON.stringify({ 'gone.js': { 'no-eval': { count }
 const firstStop = '{"status":"completed","loop_count":0}';
 
 const permissions = async (path) => (await lstat(path)).mode.toString(8).slice(-3);
+
+// A nested config, read after the root config, that acts once the scan has run.
+const acting = (action) =>
+  `import { existsSync, mkdirSync, utimesSync, writeFileSync } from 'node:fs';\n\nconst scanned = new URL('./scanned', import.meta.url);\nconst root = (file) => new URL(\`../\${file}\`, import.meta.url);\n\nif (!process.argv.includes('--print-config')) {\n  writeFileSync(scanned, '');\n} else if (existsSync(scanned)) {\n  ${action}\n}\n\nexport default {};\n`;
 
 /** A git repository with the package installed, removed when the test ends. */
 async function createProject(onTestFinished) {
@@ -337,9 +342,12 @@ describe.concurrent('setup and hook', () => {
     await project.write('bad.js', 'eval("1 + 2");\n');
     await project.write(
       'oxlint.config.ts',
-      "import preset from 'auto-anti-slop';\nimport extra from './extra.js';\n\nexport default { ...preset, ignorePatterns: [...preset.ignorePatterns, 'new'], ...extra };\n",
+      "import { createReadStream, readFileSync } from 'node:fs';\nimport preset from 'auto-anti-slop';\nimport extra from './extra.js';\n\nreadFileSync('data.txt');\ncreateReadStream('stream.txt').resume();\n\nexport default { ...preset, ignorePatterns: [...preset.ignorePatterns, 'new'], ...extra };\n",
     );
     await project.write('extra.js', 'export default {};\n');
+    await project.write('data.txt', 'data\n');
+    await project.write('stream.txt', 'data\n');
+    await project.write('base,].json', '{}');
     await project.write('oxlint-suppressions.json', baselineOf(1));
 
     const setupDuringChange = async (change, problem = 'oxlint.config.ts: changed') => {
@@ -383,6 +391,18 @@ describe.concurrent('setup and hook', () => {
       await project.write(later, '{}');
     }, `${later}: created`);
     await setupDuringWrite('oxlint.config.ts', await project.read('oxlint.config.ts'));
+    await setupDuringWrite('extra.js', await project.read('extra.js'));
+    await setupDuringWrite('data.txt', 'data\n');
+    await setupDuringWrite('stream.txt', 'data\n');
+    // A file a JSON config extends counts too.
+    const extending = join('extending', '.oxlintrc.json');
+    await mkdir(join(project.dir, 'extending'));
+    await project.write('extending/a.js', 'export const a = 1;\n');
+    await project.write(
+      extending,
+      '{\n  // "extends": ["./example.json"],\n  "extends": ["../base,].json"],\n}',
+    );
+    await setupDuringWrite('base,].json', '{}', `${extending}: changed`);
 
     // Oxlint loads configs in dependencies that git doesn't ignore.
     const dependency = join('node_modules', 'dep', '.oxlintrc.json');
@@ -411,7 +431,7 @@ describe.concurrent('setup and hook', () => {
     );
     expect((await project.setup('--baseline')).status).toBe(0);
     expect((await project.json('oxlint-suppressions.json'))['bad.js']).toBeDefined();
-  });
+  }, 180_000);
 
   test('a config can start workers and child processes', async ({ onTestFinished }) => {
     const project = await createProject(onTestFinished);
@@ -556,6 +576,234 @@ export default { ...preset, rules };
     expect(await project.json('shared/base.json')).toEqual({
       'bad.js': { 'no-eval': { count: 1 } },
     });
+  });
+
+  test('plugins see the project as the working directory', async ({ onTestFinished }) => {
+    const project = await createProject(onTestFinished);
+    await project.write('package.json', '{"type":"module"}');
+    await project.write(
+      'plugin.js',
+      "import { existsSync } from 'node:fs';\nimport { join } from 'node:path';\n\nexport default { meta: { name: 'local' }, rules: { root: { create: (context) => ({ Program(node) { if (existsSync(join(context.cwd, 'package.json'))) { context.report({ message: 'In the project.', node }); } } }) } } };\n",
+    );
+    await project.write(
+      'oxlint.config.ts',
+      "import preset from 'auto-anti-slop';\n\nexport default { ...preset, ignorePatterns: [...preset.ignorePatterns, 'plugin.js', 'oxlint.config.ts'], jsPlugins: [...preset.jsPlugins, { name: 'local', specifier: import.meta.resolve('./plugin.js') }], rules: { ...preset.rules, 'local/root': 'error' } };\n",
+    );
+    await project.write('fine.js', 'export const a = 1;\n');
+
+    const setup = await project.setup('--baseline');
+    expect(setup.status, setup.stderr).toBe(0);
+    expect(await project.json('oxlint-suppressions.json')).toEqual({
+      'fine.js': { 'local/root': { count: 1 } },
+    });
+    expect((await run('npx', ['--no-install', 'oxlint'], { cwd: project.dir })).status).toBe(0);
+  });
+
+  test('setup stops if Oxlint would apply the old baseline to the scan', async ({
+    onTestFinished,
+  }) => {
+    const project = await createProject(onTestFinished);
+    await project.setup();
+    await project.write('bad.js', 'eval("1 + 2");\n');
+    await project.write('oxlint-suppressions.json', baselineOf(1));
+
+    // An Oxlint whose check run reports nothing, as if the baseline beside it applied, or one
+    // whose plugin sees another directory.
+    for (const [stdout, problem] of [
+      ['{"diagnostics":[]}', 'applies oxlint-suppressions.json'],
+      ['no-eval other-cwd', 'context.cwd'],
+    ]) {
+      const preload = `import childProcess from 'node:child_process';
+        import { syncBuiltinESMExports } from 'node:module';
+        const original = childProcess.spawnSync;
+        childProcess.spawnSync = (command, args, options) =>
+          args.includes('--no-ignore') ? { status: 0, stdout: '${stdout}' } : original(command, args, options);
+        syncBuiltinESMExports();`;
+
+      const setup = await run(
+        process.execPath,
+        [
+          '--import',
+          `data:text/javascript,${encodeURIComponent(preload)}`,
+          setupScript,
+          '--baseline',
+        ],
+        { cwd: project.dir },
+      );
+
+      expect(setup.status).toBe(1);
+      expect(setup.stderr).toContain(problem);
+      expect(await project.read('oxlint-suppressions.json')).toBe(baselineOf(1));
+    }
+  });
+
+  test('setup stops if a config changes while it reads the configs again', async ({
+    onTestFinished,
+  }) => {
+    for (const [action, problem] of [
+      [
+        "utimesSync(root('oxlint.config.ts'), new Date(), new Date(Date.now() + 5000));",
+        'oxlint.config.ts: changed',
+      ],
+      ["writeFileSync(root('.oxlintrc.json'), '{}');", '.oxlintrc.json: created'],
+      [
+        "mkdirSync(root('late')); writeFileSync(root('late/a.js'), ''); writeFileSync(root('late/.oxlintrc.json'), '{}');",
+        `${join('late', '.oxlintrc.json')}: created`,
+      ],
+    ]) {
+      const project = await createProject(onTestFinished);
+      await project.setup();
+      await project.write('oxlint-suppressions.json', baselineOf(1));
+      await mkdir(join(project.dir, 'nested'));
+      await project.write('nested/a.js', 'export const a = 1;\n');
+      await project.write('nested/oxlint.config.ts', acting(action));
+
+      const setup = await project.setup('--baseline');
+      expect(setup.status).toBe(1);
+      expect(setup.stderr).toContain(`${problem} during setup`);
+      expect(await project.read('oxlint-suppressions.json')).toBe(baselineOf(1));
+    }
+  });
+
+  test('a config can read files in any order, and handle a failed read', async ({
+    onTestFinished,
+  }) => {
+    const project = await createProject(onTestFinished);
+    await project.write('a.txt', 'a\n');
+    await project.write('b.txt', 'b\n');
+    await project.write('oxlint-suppressions.json', baselineOf(1));
+    await project.write(
+      'oxlint.config.ts',
+      "import { existsSync, readFileSync, writeFileSync } from 'node:fs';\nimport { readFile } from 'node:fs/promises';\nimport preset from 'auto-anti-slop';\n\nconst files = ['a.txt', 'b.txt'];\n\nif (!process.argv.includes('--print-config')) {\n  writeFileSync('node_modules/scanned', '');\n} else if (existsSync('node_modules/scanned')) {\n  files.reverse();\n}\n\nfor (const file of files) {\n  readFileSync(file);\n}\n\nawait readFile(new URL('https://example.com/')).catch(() => '');\n\nexport default { ...preset };\n",
+    );
+
+    const setup = await project.setup('--baseline');
+    expect(setup.status, setup.stderr).toBe(0);
+    expect(Object.keys(await project.json('oxlint-suppressions.json'))).not.toContain('gone.js');
+  });
+
+  test('the hook says why it left the baseline unpruned', async ({ onTestFinished }) => {
+    const project = await createProject(onTestFinished);
+    await project.setup();
+    await project.write('bad.js', 'eval("1 + 2");\n');
+    await project.write(
+      'oxlint-suppressions.json',
+      JSON.stringify({ 'bad.js': { 'no-eval': { count: 2 } }, ...JSON.parse(baselineOf(1)) }),
+    );
+
+    const preload = `import childProcess from 'node:child_process';
+      import { syncBuiltinESMExports } from 'node:module';
+      const original = childProcess.spawnSync;
+      childProcess.spawnSync = (command, args, options) =>
+        args.includes('--no-ignore') ? { status: 0, stdout: '{"diagnostics":[]}' } : original(command, args, options);
+      syncBuiltinESMExports();`;
+
+    const hook = await run(
+      process.execPath,
+      ['--import', `data:text/javascript,${encodeURIComponent(preload)}`, hookScript, 'claude'],
+      { cwd: project.dir, input: '{}' },
+    );
+
+    expect(hook.status).toBe(2);
+    expect(hook.stderr).toContain("wasn't pruned: This Oxlint version applies");
+    expect(await project.json('oxlint-suppressions.json')).toEqual({
+      'bad.js': { 'no-eval': { count: 2 } },
+      ...JSON.parse(baselineOf(1)),
+    });
+  });
+
+  test('the hook names the errors that stop it pruning', async ({ onTestFinished }) => {
+    const project = await createProject(onTestFinished);
+    const recorded = JSON.stringify({ 'bad.js': { 'no-eval': { count: 2 } } });
+    await project.setup();
+    await project.write('bad.js', 'eval("1 + 2");\n');
+    await project.write('broken.js', 'const = ;\n');
+    await project.write('oxlint-suppressions.json', recorded);
+
+    const hook = await project.hook('claude');
+    expect(hook.status).toBe(2);
+    expect(hook.stderr).toMatch(/Couldn't prune suppressions for existing files\..*\nbroken\.js: /);
+    expect(await project.read('oxlint-suppressions.json')).toBe(recorded);
+  });
+
+  test('setup sees the files a config opens to read', async ({ onTestFinished }) => {
+    const dir = await mkdtemp(join(tmpdir(), 'auto-anti-slop-reads-'));
+    onTestFinished(() => rm(dir, { force: true, recursive: true }));
+
+    const script = `import fs, { constants, createReadStream, openSync } from 'node:fs';
+      import { open } from 'node:fs/promises';
+      await (await open('handle.txt', constants.O_RDONLY)).close();
+      fs.open('callback.txt', () => {});
+      createReadStream('stream.txt').resume();
+      openSync('appended.txt', 'a+');
+      openSync('synchronous.txt', 'sr');
+      openSync('written.txt', 'w');`;
+
+    const files = ['appended.txt', 'callback.txt', 'handle.txt', 'stream.txt', 'synchronous.txt'];
+
+    for (const file of files) {
+      await writeFile(join(dir, file), '');
+    }
+
+    const preload = new URL('../hooks/config-modules.mjs', import.meta.url).href;
+    const args = ['--import', preload, '--input-type=module', '-e', script];
+    const { stderr } = await run(process.execPath, args, { cwd: dir });
+    const read = Object.keys(JSON.parse(/^config-modules (.*)$/m.exec(stderr)[1]));
+
+    expect(new Set(read.map((file) => basename(file)))).toEqual(new Set(files));
+  });
+
+  test.skipIf(process.platform !== 'darwin')(
+    'a replaced baseline keeps its ACL',
+    async ({ onTestFinished }) => {
+      const project = await createProject(onTestFinished);
+      const file = join(project.dir, 'oxlint-suppressions.json');
+      await project.setup();
+      await project.write('bad.js', 'eval("1 + 2");\n');
+      await project.write('oxlint-suppressions.json', baselineOf(1));
+      const acl = () => spawnSync('ls', ['-le', file], { encoding: 'utf8' }).stdout;
+      const recorded = { 'bad.js': { 'no-eval': { count: 1 } } };
+      spawnSync('chmod', ['+a', 'everyone allow read', file]);
+
+      expect((await project.setup('--baseline')).status).toBe(0);
+      expect(await project.json('oxlint-suppressions.json')).toEqual(recorded);
+      expect(acl()).toContain('everyone allow');
+
+      // An ACL that stops the copy: the file is written in place.
+      await project.write('oxlint-suppressions.json', baselineOf(1));
+      spawnSync('chmod', ['+a', 'everyone deny read', file]);
+      expect((await project.setup('--baseline')).status).toBe(0);
+      expect(acl()).toContain('everyone deny read');
+      spawnSync('chmod', ['-N', file]);
+      expect(await project.json('oxlint-suppressions.json')).toEqual(recorded);
+
+      // The same without `cp`.
+      await project.write('oxlint-suppressions.json', baselineOf(1));
+      spawnSync('chmod', ['+a', 'everyone allow read', file]);
+      const bin = join(project.dir, 'node_modules/.node');
+      await mkdir(bin);
+      await symlink(process.execPath, join(bin, 'node'));
+
+      const setup = await run(process.execPath, [setupScript, '--baseline'], {
+        cwd: project.dir,
+        env: { PATH: bin },
+      });
+
+      expect(setup.status, setup.stderr).toBe(0);
+      expect(acl()).toContain('everyone allow');
+      expect(await project.json('oxlint-suppressions.json')).toEqual(recorded);
+    },
+  );
+
+  test('a hard-linked baseline keeps its links', async ({ onTestFinished }) => {
+    const project = await createProject(onTestFinished);
+    await project.setup();
+    await project.write('bad.js', 'eval("1 + 2");\n');
+    await project.write('oxlint-suppressions.json', baselineOf(1));
+    await link(join(project.dir, 'oxlint-suppressions.json'), join(project.dir, 'linked.json'));
+
+    expect((await project.setup('--baseline')).status).toBe(0);
+    expect(await project.json('linked.json')).toEqual({ 'bad.js': { 'no-eval': { count: 1 } } });
   });
 
   test('replacing a baseline keeps its permissions and symlink', async ({ onTestFinished }) => {

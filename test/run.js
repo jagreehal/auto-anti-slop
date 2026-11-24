@@ -5,10 +5,14 @@
 import { spawn } from 'node:child_process';
 
 /** Run a command without blocking the concurrent tests beside it. */
-export const run = (command, args, { cwd, input = '' }) =>
+export const run = (command, args, { cwd, env, input = '' }) =>
   new Promise((resolve, reject) => {
     // Run Oxlint standalone, outside the Vite+ mode this test runner sets.
-    const child = spawn(command, args, { cwd, env: { ...process.env, VP_VERSION: undefined } });
+    const child = spawn(command, args, {
+      cwd,
+      env: { ...process.env, VP_VERSION: undefined, ...env },
+    });
+
     const output = { stderr: '', stdout: '' };
 
     for (const stream of ['stderr', 'stdout']) {
