@@ -22,6 +22,9 @@ with Yarn, `yarn add -D` and `yarn auto-anti-slop`.
 `npx auto-anti-slop` sets the project up:
 
 - creates `oxlint.config.ts` with the preset, unless an Oxlint config exists;
+- when it creates that config, records the findings in existing code in
+  `oxlint-suppressions.json`, so only new ones fail. If that file already
+  exists, setup keeps it and records nothing;
 - adds the [lint hook](#the-agent-hook) to `.claude/settings.json`,
   `.codex/hooks.json` and `.cursor/hooks.json`;
 - adds a short lint section to `AGENTS.md`, which Codex and Cursor read;
@@ -58,11 +61,44 @@ Spread the preset's `rules`, `overrides` and `ignorePatterns` as shown;
 without the spread, your values replace the preset's. Then delete the old
 config file.
 
+### React and other JSX
+
+The right React, hooks and accessibility rules depend on your framework and
+its version, so you choose them. Here they come from Oxlint's own plugins:
+
+```ts
+// oxlint.config.ts
+import autoAntiSlop from 'auto-anti-slop';
+import { defineConfig } from 'oxlint';
+
+export default defineConfig({
+  ...autoAntiSlop,
+  plugins: [...autoAntiSlop.plugins, 'react', 'jsx-a11y'],
+  rules: {
+    ...autoAntiSlop.rules,
+    'react/rules-of-hooks': 'error',
+    'react/exhaustive-deps': 'error',
+    'jsx-a11y/alt-text': 'error',
+  },
+});
+```
+
+List the plugin in `plugins` to turn on its rules.
+
 ### A project with existing code
 
-`npx oxlint` reports findings in code written before the preset. To adopt it
-without fixing them first, run `npx auto-anti-slop --baseline` and commit the
-`oxlint-suppressions.json` it writes. See [Existing projects](#existing-projects).
+Setup records findings in code written before the preset, so `npx oxlint`
+passes from the start. Commit the `oxlint-suppressions.json` it writes.
+
+- If that file exists, setup keeps it, and `npx oxlint` reports findings it
+  doesn't list. Run `npx auto-anti-slop --baseline` to replace it.
+- If you have a config, add the preset and run the same command.
+- To see every finding, delete the file.
+- Fix syntax errors first. Setup stops on them before it writes anything.
+- If a config changes while setup lints, setup stops and asks you to run it
+  again.
+
+See [Existing projects](#existing-projects) for how the baseline works.
 
 ## The agent hook
 
@@ -112,6 +148,13 @@ real types.
 | [`anti-slop/no-shape-in-symbol-names`](docs/rules/no-shape-in-symbol-names.md)                     | Names like `UserShape`                        |
 | [`anti-slop/no-conditional-empty-object-spread`](docs/rules/no-conditional-empty-object-spread.md) | `...(cond ? { a } : {})`                      |
 
+**Leaky modules.** A deep module hides a lot behind a narrow interface.
+
+| Rule                                                                           | Flags                                                      |
+| ------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| [`anti-slop/no-exposed-mutable-field`](docs/rules/no-exposed-mutable-field.md) | Publicly writable state on a class that keeps some private |
+| [`anti-slop/no-export-all`](docs/rules/no-export-all.md)                       | `export *` from a relative path (opt-in)                   |
+
 **Wasted work.**
 
 | Rule                                                                               | Flags                                |
@@ -125,26 +168,26 @@ real types.
 | ---------------------------------------------------------------- | ------------------------- |
 | [`anti-slop/no-module-mocking`](docs/rules/no-module-mocking.md) | `vi.mock` and `jest.mock` |
 
-The `anti-slop/` rules come from anti-slop, under its MIT license. Credits
-are in [NOTICE.md](NOTICE.md).
+Licenses and credits are in [NOTICE.md](NOTICE.md).
 
 ### Base rules
 
-The preset also turns on about 400 Oxlint rules: almost all of Oxlint's
-correctness category, plus the suspicious, pedantic and performance rules that
-catch bugs. Style rules stay off. I ran each candidate on real codebases and
+The preset also turns on over 300 Oxlint rules: almost all of Oxlint's
+framework-neutral correctness rules, plus suspicious, pedantic and performance
+rules that catch bugs. Style rules stay off. I ran each candidate on real codebases and
 left out the ones that flagged idiomatic code. What you'll notice day to day:
 
-- Each enabled rule is an error. The preset lists rules one by one, so an
-  Oxlint upgrade can't switch on new ones.
+- Each enabled rule is an error, and an unused `eslint-disable` or
+  `oxlint-disable` comment is a warning. The preset lists rules one by one, so
+  you decide when to take new ones.
 - `==` and `!=` are errors, including against `null`. Write
   `value === null || value === undefined`.
-- Passing a promise-returning function where `void` is expected is an error.
-  For React event handlers, set `checksVoidReturn: { attributes: false }` on
-  `@typescript-eslint/no-misused-promises` in a JSX override.
+- Passing a promise-returning function where `void` is expected is an error,
+  except in JSX attributes such as `onClick`.
 - Floating promises, `eval`, `console` and `@ts-ignore` are errors.
-- Import cycles, mutating `.sort()` (use `.toSorted()`), `||` where `??` is
-  meant, deprecated APIs, and tests without an `expect` are errors.
+- Import cycles, files over 2,000 lines, mutating `.sort()` (use
+  `.toSorted()`), `||` where `??` is meant, deprecated APIs, and tests without
+  an `expect` are errors.
 - Conditions must test what they mean: `if (count)` on a `number | undefined`
   and checks the types already settle are errors
   (`typescript/strict-boolean-expressions`, `typescript/no-unnecessary-condition`).
@@ -156,10 +199,13 @@ left out the ones that flagged idiomatic code. What you'll notice day to day:
 
 ## Existing projects
 
-`--baseline` runs `oxlint --suppress-all`, which records in
-`oxlint-suppressions.json` how many findings each file has for each rule. It
-runs only when your config loads the preset's plugin and enables at least half
-as many error-level rules as the preset. From then on:
+`--baseline` lints the project and records in `oxlint-suppressions.json` how
+many findings each file has for each rule, replacing any existing baseline. It
+lints the files `npx oxlint` would, with the same configs, and swaps the new
+file in when it finishes, so a run that stops early keeps your old baseline. The
+file keeps its permissions, and a symlink stays a symlink. If you have a config,
+it must load the preset's plugin and enable at least half as many error-level
+rules as the preset. From then on:
 
 - New findings fail, in CI and in the agent hook. Recorded ones don't.
 - Fixing recorded findings also fails until you run
@@ -184,14 +230,15 @@ it on a tree that already passes:
 ## Development
 
 Use Node.js 24 and [Vite+](https://viteplus.dev/guide/): `vp install`,
-`vp check`, `vp test`. `vp pm pack` builds a tarball to try in another
-project. Include an example of the lint change in any pull request that
-changes a rule, and run `pnpm changeset` to describe the change. Report
-vulnerabilities through the [security policy](SECURITY.md).
+`vp check`, `vp test`. [`examples/`](examples/README.md) holds small projects
+linted with the whole preset, with their findings saved. `vp pm pack` builds a
+tarball to try in another project. Include an example of the lint change in
+any pull request that changes a rule, and run `pnpm changeset` to describe the
+change. Report vulnerabilities through the [security policy](SECURITY.md).
 
 ## Releases
 
-Releases use [Changesets](https://github.com/changesets/changesets). When
+Releases use Changesets. When
 pull requests with changesets merge to `main`, the Release workflow opens a
 release pull request that bumps the version and updates `CHANGELOG.md`.
 Merging it runs the checks and tests, then publishes to npm with provenance.

@@ -1,0 +1,6 @@
+src/format.js:2 eslint(eqeqeq)
+src/format.js:3 eslint(no-throw-literal)
+src/format.js:6 eslint(no-console)
+src/format.js:8 anti-slop(no-array-filter-map)
+src/format.js:11 unicorn(no-array-sort)
+src/format.js:13 anti-slop(no-conditional-empty-object-spread)

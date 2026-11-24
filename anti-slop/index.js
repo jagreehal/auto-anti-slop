@@ -1,4 +1,6 @@
-// Every anti-slop rule except the Effect rules; see UPSTREAM.md.
+// Every anti-slop rule except the Effect rules, plus our own; see UPSTREAM.md.
+import { noExportAllRule } from '../rules/no-export-all.js';
+import { noExposedMutableFieldRule } from '../rules/no-exposed-mutable-field.js';
 import { noArrayFilterMapRule } from './rules/no-array-filter-map.js';
 import { noChainedTypeAssertionsRule } from './rules/no-chained-type-assertions.js';
 import { noConditionalEmptyObjectSpreadRule } from './rules/no-conditional-empty-object-spread.js';
@@ -24,6 +26,8 @@ export default {
     'no-array-filter-map': noArrayFilterMapRule,
     'no-chained-type-assertions': noChainedTypeAssertionsRule,
     'no-conditional-empty-object-spread': noConditionalEmptyObjectSpreadRule,
+    'no-export-all': noExportAllRule,
+    'no-exposed-mutable-field': noExposedMutableFieldRule,
     'no-known-value-widening': noKnownValueWideningRule,
     'no-module-mocking': noModuleMockingRule,
     'no-object-parameters': noObjectParametersRule,

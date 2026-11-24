@@ -20,6 +20,7 @@ tester.run('anti-slop/require-readable-spacing', requireReadableSpacingRule, {
     'function f() {\n// return docs\nreturn 1;\n}',
     'const a = 1;\n\n\nconst b = 2;',
     'switch (x) { case 1: case 2: go(); break; default: stop(); }',
+    "export { a } from './a';\nexport * from './b';\nexport type { C } from './c';",
     'const a = 1;\nconst b = 2;',
     'export const a = 1;\nexport const b = 2;',
     'const a = 1;\nlet b = 2;\nvar c = 3;',
@@ -30,6 +31,16 @@ tester.run('anti-slop/require-readable-spacing', requireReadableSpacingRule, {
     "import { a } from 'a';\n\nconst b = a;\nexport const c = b;",
   ],
   invalid: [
+    {
+      code: "export { a } from './a';\n// b\nexport { b } from './b';",
+      output: "export { a } from './a';\n\n// b\nexport { b } from './b';",
+      errors: [error],
+    },
+    {
+      code: "export { a } from './a';\nexport const b = 1;",
+      output: "export { a } from './a';\n\nexport const b = 1;",
+      errors: [error],
+    },
     {
       code: 'const a = 1;\n/** B docs. */\nconst b = 2;',
       output: 'const a = 1;\n\n/** B docs. */\nconst b = 2;',

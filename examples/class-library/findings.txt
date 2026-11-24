@@ -1,0 +1,4 @@
+src/run-queue.test.ts:13 vitest(expect-expect)
+src/run-queue.ts:4 anti-slop(no-exposed-mutable-field)
+src/run-queue.ts:5 anti-slop(no-exposed-mutable-field)
+src/run-queue.ts:15 anti-slop(no-exposed-mutable-field)

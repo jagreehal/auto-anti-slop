@@ -75,6 +75,16 @@ test('a consumer can load the preset with its lint rules and file overrides', as
     'construct.test.js': 'new URL("https://example.com");',
     'eval.js': 'eval("1 + 2");',
     'globals.js': 'export const location = window.location.href + process.cwd();',
+    // Only TypeScript has `readonly`, so the JavaScript twin passes.
+    'leak.js': 'export class Leak { #a = 1; b = 2; read() { return this.#a; } }',
+    'leak.astro':
+      '---\nexport class Leak { #a = 1; b = 2; read(): number { return this.#a; } }\n---\n',
+    'leak.svelte':
+      '<script>\nexport class Leak { #a = 1; b = 2; read() { return this.#a; } }\n</script>\n',
+    'leak.vue':
+      '<script>\nexport class Leak { #a = 1; b = 2; read() { return this.#a; } }\n</script>\n',
+    'leak.ts': 'export class Leak { #a = 1; b = 2; read(): number { return this.#a; } }',
+    'long.ts': `export const long = 1;${'\n'.repeat(2001)}`,
     'method.test.int.ts': detachedMethod,
     'method.test.ts': detachedMethod,
     'method.ts': detachedMethod,
@@ -183,6 +193,8 @@ test('a consumer can load the preset with its lint rules and file overrides', as
     'conditions.ts typescript(strict-boolean-expressions) error',
     'construct.js eslint(no-new) error',
     'eval.js eslint(no-eval) error',
+    'leak.ts anti-slop(no-exposed-mutable-field) error',
+    'long.ts eslint(max-lines) error',
     'method.ts typescript(unbound-method) error',
     'mock.test.js anti-slop(no-module-mocking) error',
     'nullish.ts eslint(eqeqeq) error',

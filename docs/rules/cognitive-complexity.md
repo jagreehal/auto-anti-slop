@@ -1,6 +1,6 @@
 # `sonarjs/cognitive-complexity`
 
-Cognitive complexity measures how hard a function is to read. Each branch costs more the deeper it is nested, so the score rises fastest in code that is hard to follow. The rule comes from [eslint-plugin-sonarjs](https://github.com/SonarSource/SonarJS) and follows [SonarSource's specification](https://www.sonarsource.com/docs/CognitiveComplexity.pdf).
+Cognitive complexity measures how hard a function is to read. Each branch costs more the deeper it is nested, so the score rises fastest in code that is hard to follow. The rule comes from [eslint-plugin-sonarjs](https://www.npmjs.com/package/eslint-plugin-sonarjs) and follows [SonarSource's specification](https://www.sonarsource.com/docs/CognitiveComplexity.pdf).
 
 ## ❌ Bad
 

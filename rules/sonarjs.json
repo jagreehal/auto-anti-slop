@@ -1,0 +1,1421 @@
+{
+  "function-name": {
+    "defaultOptions": [
+      {
+        "format": "^[_a-z][a-zA-Z0-9]*$"
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "class-name": {
+    "defaultOptions": [
+      {
+        "format": "^\\$?[A-Z][a-zA-Z0-9]*$"
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "max-lines": {
+    "defaultOptions": [
+      {
+        "maximum": 1000
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "maximum": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-tab": {
+    "defaultOptions": []
+  },
+  "variable-name": {
+    "defaultOptions": [
+      {
+        "format": "^[_$A-Za-z][$A-Za-z0-9]*$|^[_$A-Z][_$A-Z0-9]+$"
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "format": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "comment-regex": {
+    "defaultOptions": [
+      {
+        "regularExpression": "",
+        "message": "The regular expression matches this comment.",
+        "flags": ""
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "regularExpression": {
+              "type": "string"
+            },
+            "message": {
+              "type": "string"
+            },
+            "flags": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-commented-code": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "elseif-without-else": {
+    "defaultOptions": []
+  },
+  "no-fallthrough": {
+    "defaultOptions": []
+  },
+  "nested-control-flow": {
+    "defaultOptions": [
+      {
+        "maximumNestingLevel": 3
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "maximumNestingLevel": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "too-many-break-or-continue-in-loop": {
+    "defaultOptions": []
+  },
+  "max-lines-per-function": {
+    "defaultOptions": [
+      {
+        "maximum": 200
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "maximum": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-nested-incdec": {
+    "defaultOptions": []
+  },
+  "no-equals-in-for-termination": {
+    "defaultOptions": []
+  },
+  "no-extra-arguments": {
+    "defaultOptions": []
+  },
+  "no-collapsible-if": {
+    "defaultOptions": []
+  },
+  "expression-complexity": {
+    "defaultOptions": [
+      {
+        "max": 3
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "max": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-redundant-parentheses": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-labels": {
+    "defaultOptions": []
+  },
+  "no-nested-assignment": {
+    "defaultOptions": []
+  },
+  "no-redundant-boolean": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "prefer-single-boolean-return": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "unused-import": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "fixme-tag": {
+    "defaultOptions": []
+  },
+  "todo-tag": {
+    "defaultOptions": []
+  },
+  "useless-string-operation": {
+    "defaultOptions": []
+  },
+  "no-unused-function-argument": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-duplicate-string": {
+    "defaultOptions": [
+      {
+        "threshold": 3,
+        "ignoreStrings": "application/json"
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "ignoreStrings": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-case-label-in-switch": {
+    "defaultOptions": []
+  },
+  "no-parameter-reassignment": {
+    "defaultOptions": []
+  },
+  "no-floating-point-equality": {
+    "defaultOptions": []
+  },
+  "prefer-while": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "no-sonar-comments": {
+    "defaultOptions": []
+  },
+  "no-small-switch": {
+    "defaultOptions": []
+  },
+  "no-hardcoded-ip": {
+    "defaultOptions": []
+  },
+  "label-position": {
+    "defaultOptions": []
+  },
+  "public-static-readonly": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "file-header": {
+    "defaultOptions": [
+      {
+        "headerFormat": "",
+        "isRegularExpression": false
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "headerFormat": {
+              "type": "string"
+            },
+            "isRegularExpression": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "call-argument-line": {
+    "defaultOptions": []
+  },
+  "max-switch-cases": {
+    "defaultOptions": [
+      30
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "integer",
+          "minimum": 0
+        }
+      ]
+    }
+  },
+  "no-unused-vars": {
+    "defaultOptions": []
+  },
+  "prefer-immediate-return": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "function-inside-loop": {
+    "defaultOptions": []
+  },
+  "code-eval": {
+    "defaultOptions": []
+  },
+  "no-variable-usage-before-declaration": {
+    "defaultOptions": []
+  },
+  "future-reserved-words": {
+    "defaultOptions": []
+  },
+  "array-constructor": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "bitwise-operators": {
+    "defaultOptions": []
+  },
+  "no-function-declaration-in-block": {
+    "defaultOptions": []
+  },
+  "no-primitive-wrappers": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "for-in": {
+    "defaultOptions": []
+  },
+  "cyclomatic-complexity": {
+    "defaultOptions": [
+      {
+        "threshold": 10
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-skipped-tests": {
+    "defaultOptions": []
+  },
+  "no-identical-expressions": {
+    "defaultOptions": []
+  },
+  "no-nested-switch": {
+    "defaultOptions": []
+  },
+  "constructor-for-side-effects": {
+    "defaultOptions": []
+  },
+  "no-dead-store": {
+    "defaultOptions": []
+  },
+  "no-identical-conditions": {
+    "defaultOptions": []
+  },
+  "no-duplicated-branches": {
+    "defaultOptions": []
+  },
+  "deprecation": {
+    "defaultOptions": []
+  },
+  "no-inverted-boolean-check": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "misplaced-loop-counter": {
+    "defaultOptions": []
+  },
+  "no-nested-functions": {
+    "defaultOptions": [
+      {
+        "threshold": 5
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-hardcoded-passwords": {
+    "defaultOptions": [
+      {
+        "passwordWords": [
+          "password",
+          "pwd",
+          "passwd",
+          "passphrase"
+        ]
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "passwordWords": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "sql-queries": {
+    "defaultOptions": []
+  },
+  "insecure-cookie": {
+    "defaultOptions": []
+  },
+  "no-useless-increment": {
+    "defaultOptions": []
+  },
+  "no-globals-shadowing": {
+    "defaultOptions": []
+  },
+  "no-undefined-assignment": {
+    "defaultOptions": []
+  },
+  "no-empty-test-file": {
+    "defaultOptions": []
+  },
+  "no-ignored-return": {
+    "defaultOptions": []
+  },
+  "no-wildcard-import": {
+    "defaultOptions": []
+  },
+  "arguments-order": {
+    "defaultOptions": []
+  },
+  "pseudo-random": {
+    "defaultOptions": []
+  },
+  "for-loop-increment-sign": {
+    "defaultOptions": []
+  },
+  "null-dereference": {
+    "defaultOptions": []
+  },
+  "no-selector-parameter": {
+    "defaultOptions": []
+  },
+  "updated-loop-counter": {
+    "defaultOptions": []
+  },
+  "block-scoped-var": {
+    "defaultOptions": []
+  },
+  "no-built-in-override": {
+    "defaultOptions": []
+  },
+  "prefer-object-literal": {
+    "defaultOptions": []
+  },
+  "no-ignored-exceptions": {
+    "defaultOptions": []
+  },
+  "no-gratuitous-expressions": {
+    "defaultOptions": []
+  },
+  "file-uploads": {
+    "defaultOptions": []
+  },
+  "file-permissions": {
+    "defaultOptions": []
+  },
+  "no-empty-character-class": {
+    "defaultOptions": []
+  },
+  "no-unenclosed-multiline-block": {
+    "defaultOptions": []
+  },
+  "index-of-compare-to-positive-number": {
+    "defaultOptions": []
+  },
+  "assertions-in-tests": {
+    "defaultOptions": []
+  },
+  "no-implicit-global": {
+    "defaultOptions": []
+  },
+  "no-useless-catch": {
+    "defaultOptions": []
+  },
+  "xml-parser-xxe": {
+    "defaultOptions": []
+  },
+  "non-existent-operator": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "web-sql-database": {
+    "defaultOptions": []
+  },
+  "post-message": {
+    "defaultOptions": []
+  },
+  "no-array-delete": {
+    "defaultOptions": []
+  },
+  "no-alphabetical-sort": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-fixed-wait-in-tests": {
+    "defaultOptions": []
+  },
+  "no-incomplete-assertions": {
+    "defaultOptions": []
+  },
+  "no-global-this": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "new-operator-misuse": {
+    "defaultOptions": [
+      {
+        "considerJSDoc": false
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "considerJSDoc": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-delete-var": {
+    "defaultOptions": []
+  },
+  "strings-comparison": {
+    "defaultOptions": []
+  },
+  "file-name-differ-from-class": {
+    "defaultOptions": []
+  },
+  "cookie-no-httponly": {
+    "defaultOptions": []
+  },
+  "no-nested-conditional": {
+    "defaultOptions": []
+  },
+  "no-incorrect-string-concat": {
+    "defaultOptions": []
+  },
+  "different-types-comparison": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "inverted-assertion-arguments": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "shorthand-property-grouping": {
+    "defaultOptions": []
+  },
+  "updated-const-var": {
+    "defaultOptions": []
+  },
+  "arguments-usage": {
+    "defaultOptions": []
+  },
+  "destructuring-assignment-syntax": {
+    "defaultOptions": []
+  },
+  "no-invariant-returns": {
+    "defaultOptions": []
+  },
+  "arrow-function-convention": {
+    "defaultOptions": [
+      {
+        "requireParameterParentheses": false,
+        "requireBodyBraces": false
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "requireParameterParentheses": {
+              "type": "boolean"
+            },
+            "requireBodyBraces": {
+              "type": "boolean"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "class-prototype": {
+    "defaultOptions": []
+  },
+  "generator-without-yield": {
+    "defaultOptions": []
+  },
+  "no-require-or-define": {
+    "defaultOptions": []
+  },
+  "no-associative-arrays": {
+    "defaultOptions": []
+  },
+  "comma-or-logical-or-case": {
+    "defaultOptions": []
+  },
+  "no-redundant-jump": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "inconsistent-function-call": {
+    "defaultOptions": []
+  },
+  "no-use-of-empty-return-value": {
+    "defaultOptions": []
+  },
+  "void-use": {
+    "defaultOptions": []
+  },
+  "operation-returning-nan": {
+    "defaultOptions": []
+  },
+  "values-not-convertible-to-numbers": {
+    "defaultOptions": []
+  },
+  "non-number-in-arithmetic-expression": {
+    "defaultOptions": []
+  },
+  "argument-type": {
+    "defaultOptions": []
+  },
+  "in-operator-type-error": {
+    "defaultOptions": []
+  },
+  "array-callback-without-return": {
+    "defaultOptions": []
+  },
+  "declarations-in-global-scope": {
+    "defaultOptions": []
+  },
+  "function-return-type": {
+    "defaultOptions": []
+  },
+  "no-inconsistent-returns": {
+    "defaultOptions": []
+  },
+  "no-reference-error": {
+    "defaultOptions": []
+  },
+  "no-all-duplicated-branches": {
+    "defaultOptions": []
+  },
+  "no-same-line-conditional": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "conditional-indentation": {
+    "defaultOptions": []
+  },
+  "no-collection-size-mischeck": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-unthrown-error": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-unused-collection": {
+    "defaultOptions": []
+  },
+  "no-os-command-from-path": {
+    "defaultOptions": []
+  },
+  "no-misleading-array-reverse": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-for-in-iterable": {
+    "defaultOptions": []
+  },
+  "no-element-overwrite": {
+    "defaultOptions": []
+  },
+  "no-identical-functions": {
+    "defaultOptions": [
+      3
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "integer",
+          "minimum": 3
+        }
+      ]
+    }
+  },
+  "no-empty-collection": {
+    "defaultOptions": []
+  },
+  "no-redundant-assignments": {
+    "defaultOptions": []
+  },
+  "prefer-type-guard": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "use-type-alias": {
+    "defaultOptions": []
+  },
+  "no-return-type-any": {
+    "defaultOptions": []
+  },
+  "no-implicit-dependencies": {
+    "defaultOptions": [
+      {
+        "whitelist": []
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "whitelist": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-useless-intersection": {
+    "defaultOptions": []
+  },
+  "weak-ssl": {
+    "defaultOptions": []
+  },
+  "no-weak-keys": {
+    "defaultOptions": []
+  },
+  "csrf": {
+    "defaultOptions": []
+  },
+  "production-debug": {
+    "defaultOptions": []
+  },
+  "prefer-default-last": {
+    "defaultOptions": []
+  },
+  "no-in-misuse": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-duplicate-in-composite": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "max-union-size": {
+    "defaultOptions": [
+      {
+        "threshold": 3
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-undefined-argument": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-nested-template-literals": {
+    "defaultOptions": []
+  },
+  "prefer-promise-shorthand": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "os-command": {
+    "defaultOptions": []
+  },
+  "no-redundant-optional": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "hashing": {
+    "defaultOptions": []
+  },
+  "bool-param-default": {
+    "defaultOptions": []
+  },
+  "no-try-promise": {
+    "defaultOptions": []
+  },
+  "unverified-certificate": {
+    "defaultOptions": []
+  },
+  "no-unsafe-unzip": {
+    "defaultOptions": []
+  },
+  "cors": {
+    "defaultOptions": []
+  },
+  "link-with-target-blank": {
+    "defaultOptions": []
+  },
+  "disabled-auto-escaping": {
+    "defaultOptions": []
+  },
+  "table-header": {
+    "defaultOptions": []
+  },
+  "no-table-as-layout": {
+    "defaultOptions": []
+  },
+  "table-header-reference": {
+    "defaultOptions": []
+  },
+  "object-alt-content": {
+    "defaultOptions": []
+  },
+  "no-clear-text-protocols": {
+    "defaultOptions": []
+  },
+  "publicly-writable-directories": {
+    "defaultOptions": []
+  },
+  "unverified-hostname": {
+    "defaultOptions": []
+  },
+  "encryption-secure-mode": {
+    "defaultOptions": []
+  },
+  "no-weak-cipher": {
+    "defaultOptions": []
+  },
+  "no-intrusive-permissions": {
+    "defaultOptions": [
+      {
+        "permissions": [
+          "geolocation"
+        ]
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "insecure-jwt-token": {
+    "defaultOptions": []
+  },
+  "x-powered-by": {
+    "defaultOptions": []
+  },
+  "hidden-files": {
+    "defaultOptions": []
+  },
+  "content-length": {
+    "defaultOptions": [
+      {
+        "fileUploadSizeLimit": 8000000,
+        "standardSizeLimit": 2000000
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "fileUploadSizeLimit": {
+              "type": "integer"
+            },
+            "standardSizeLimit": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "disabled-resource-integrity": {
+    "defaultOptions": []
+  },
+  "content-security-policy": {
+    "defaultOptions": []
+  },
+  "no-mixed-content": {
+    "defaultOptions": []
+  },
+  "frame-ancestors": {
+    "defaultOptions": []
+  },
+  "no-mime-sniff": {
+    "defaultOptions": []
+  },
+  "no-referrer-policy": {
+    "defaultOptions": []
+  },
+  "strict-transport-security": {
+    "defaultOptions": []
+  },
+  "confidential-information-logging": {
+    "defaultOptions": []
+  },
+  "no-ip-forward": {
+    "defaultOptions": []
+  },
+  "empty-string-repetition": {
+    "defaultOptions": []
+  },
+  "regex-complexity": {
+    "defaultOptions": [
+      {
+        "threshold": 20
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "threshold": {
+              "type": "integer"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-incompatible-assertion-types": {
+    "defaultOptions": []
+  },
+  "anchor-precedence": {
+    "defaultOptions": []
+  },
+  "slow-regex": {
+    "defaultOptions": []
+  },
+  "no-invalid-regexp": {
+    "defaultOptions": []
+  },
+  "unused-named-groups": {
+    "defaultOptions": []
+  },
+  "no-same-argument-assert": {
+    "defaultOptions": []
+  },
+  "unicode-aware-regex": {
+    "defaultOptions": []
+  },
+  "no-misleading-character-class": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "duplicates-in-character-class": {
+    "defaultOptions": []
+  },
+  "session-regeneration": {
+    "defaultOptions": []
+  },
+  "prefer-specific-assertions": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-trivial-assertions": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "test-check-exception": {
+    "defaultOptions": []
+  },
+  "stable-tests": {
+    "defaultOptions": []
+  },
+  "parameterized-tests": {
+    "defaultOptions": []
+  },
+  "no-empty-after-reluctant": {
+    "defaultOptions": []
+  },
+  "single-character-alternation": {
+    "defaultOptions": []
+  },
+  "no-code-after-done": {
+    "defaultOptions": []
+  },
+  "disabled-timeout": {
+    "defaultOptions": []
+  },
+  "chai-determinate-assertion": {
+    "defaultOptions": []
+  },
+  "aws-s3-bucket-insecure-http": {
+    "defaultOptions": []
+  },
+  "aws-s3-bucket-versioning": {
+    "defaultOptions": []
+  },
+  "aws-s3-bucket-granted-access": {
+    "defaultOptions": []
+  },
+  "no-angular-bypass-sanitization": {
+    "defaultOptions": []
+  },
+  "aws-iam-public-access": {
+    "defaultOptions": []
+  },
+  "aws-ec2-unencrypted-ebs-volume": {
+    "defaultOptions": []
+  },
+  "aws-s3-bucket-public-access": {
+    "defaultOptions": []
+  },
+  "aws-iam-all-privileges": {
+    "defaultOptions": []
+  },
+  "aws-rds-unencrypted-databases": {
+    "defaultOptions": []
+  },
+  "aws-iam-all-resources-accessible": {
+    "defaultOptions": []
+  },
+  "aws-opensearchservice-domain": {
+    "defaultOptions": []
+  },
+  "aws-iam-privilege-escalation": {
+    "defaultOptions": []
+  },
+  "aws-sagemaker-unencrypted-notebook": {
+    "defaultOptions": []
+  },
+  "aws-restricted-ip-admin-access": {
+    "defaultOptions": []
+  },
+  "no-empty-alternatives": {
+    "defaultOptions": []
+  },
+  "no-control-regex": {
+    "defaultOptions": []
+  },
+  "no-regex-spaces": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "aws-sns-unencrypted-topics": {
+    "defaultOptions": []
+  },
+  "existing-groups": {
+    "defaultOptions": []
+  },
+  "aws-ec2-rds-dms-public": {
+    "defaultOptions": []
+  },
+  "aws-sqs-unencrypted-queue": {
+    "defaultOptions": []
+  },
+  "no-empty-group": {
+    "defaultOptions": []
+  },
+  "aws-efs-unencrypted": {
+    "defaultOptions": []
+  },
+  "aws-apigateway-public-api": {
+    "defaultOptions": []
+  },
+  "stateful-regex": {
+    "defaultOptions": []
+  },
+  "concise-regex": {
+    "defaultOptions": []
+  },
+  "single-char-in-character-classes": {
+    "defaultOptions": []
+  },
+  "no-hardcoded-secrets": {
+    "defaultOptions": [
+      {
+        "secretWords": "api[_.-]?key,auth,credential,secret,token",
+        "randomnessSensibility": 5
+      }
+    ],
+    "schema": {
+      "type": "array",
+      "minItems": 0,
+      "maxItems": 1,
+      "items": [
+        {
+          "type": "object",
+          "properties": {
+            "secretWords": {
+              "type": "string"
+            },
+            "randomnessSensibility": {
+              "type": "number"
+            }
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "no-exclusive-tests": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "hardcoded-secret-signatures": {
+    "defaultOptions": []
+  },
+  "jsx-no-leaked-render": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-hook-setter-in-body": {
+    "defaultOptions": []
+  },
+  "no-useless-react-setstate": {
+    "defaultOptions": []
+  },
+  "no-uniq-key": {
+    "defaultOptions": []
+  },
+  "redundant-type-aliases": {
+    "defaultOptions": []
+  },
+  "prefer-regexp-exec": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-internal-api-use": {
+    "defaultOptions": []
+  },
+  "prefer-read-only-props": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-literal-call": {
+    "defaultOptions": []
+  },
+  "reduce-initial-value": {
+    "defaultOptions": []
+  },
+  "no-async-constructor": {
+    "defaultOptions": []
+  },
+  "review-blockchain-mnemonic": {
+    "defaultOptions": []
+  },
+  "dynamically-constructed-templates": {
+    "defaultOptions": []
+  },
+  "no-session-cookies-on-static-assets": {
+    "defaultOptions": []
+  },
+  "dompurify-unsafe-config": {
+    "defaultOptions": []
+  },
+  "no-duplicate-test-title": {
+    "defaultOptions": []
+  },
+  "async-test-assertions": {
+    "defaultOptions": []
+  },
+  "no-empty-test-title": {
+    "defaultOptions": []
+  },
+  "hooks-before-test-cases": {
+    "defaultOptions": []
+  },
+  "no-forced-browser-interaction": {
+    "defaultOptions": []
+  },
+  "assertions-in-test-cases": {
+    "defaultOptions": []
+  },
+  "synchronous-suite-callback": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "super-linear-regex": {
+    "defaultOptions": []
+  },
+  "prefer-native-lodash-alternative": {
+    "defaultOptions": []
+  },
+  "no-default-utility-imports": {
+    "defaultOptions": []
+  },
+  "memoize-cache-key": {
+    "defaultOptions": []
+  },
+  "no-debug-commands-in-ui-tests": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "no-mixed-completion-style": {
+    "defaultOptions": []
+  },
+  "no-interpolation-in-inline-snapshots": {
+    "defaultOptions": []
+  },
+  "explicit-test-skip": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-empty-parameterized-test-dataset": {
+    "defaultOptions": []
+  },
+  "testing-library-query-assertion": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "synchronous-exception-assertions": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "composite-assertions": {
+    "defaultOptions": []
+  },
+  "no-duplicate-parameterized-test-case": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "no-debounce-throttle-in-render": {
+    "defaultOptions": []
+  },
+  "avoid-mutating-nested-properties-of-shallow-clones": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "prefer-native-jquery-alternative": {
+    "defaultOptions": []
+  },
+  "no-vue-class-component": {
+    "defaultOptions": []
+  },
+  "no-vue-mixins": {
+    "defaultOptions": []
+  },
+  "testing-library-prefer-query-by-disappearance": {
+    "defaultOptions": [],
+    "fixable": "code"
+  },
+  "prefer-cypress-should": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  },
+  "no-mutate-reactive-state-in-updated-hook": {
+    "defaultOptions": []
+  },
+  "vitest-mock-at-module-scope": {
+    "defaultOptions": []
+  },
+  "no-networkidle-wait": {
+    "defaultOptions": []
+  },
+  "prefer-native-axios-alternative": {
+    "defaultOptions": [],
+    "hasSuggestions": true
+  }
+}

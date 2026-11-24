@@ -30,6 +30,8 @@
     "index.d.ts",
     "anti-slop",
     "!anti-slop/**/*.test.js",
+    "rules",
+    "!rules/**/*.test.js",
     "docs",
     "NOTICE.md",
     "skills/migrate-oxlint-config/SKILL.md"

@@ -1,6 +1,6 @@
 # Vendored padding-line-between-statements
 
-Adapted from ESLint Stylistic, commit `435c3ea0fd26a5fef9042c4b36b6e165fbbf8d08`, under the MIT license in `LICENSE`. Keep `LICENSE` with every copy.
+Adapted from ESLint Stylistic, under the MIT license in `LICENSE`. Keep `LICENSE` with every copy.
 
 ## Local adaptations
 

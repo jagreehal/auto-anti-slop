@@ -11,6 +11,20 @@ function hasLeadingComment(node, sourceCode) {
     .getCommentsBefore(node)
     .some((comment) => comment.loc.start.line !== previousLine);
 }
+/** `export { a } from './a';` or `export * from './a';` on one line. */
+function isSinglelineReExport(node) {
+  return (
+    (node.type === 'ExportAllDeclaration' ||
+      (node.type === 'ExportNamedDeclaration' && node.source !== null)) &&
+    node.loc.start.line === node.loc.end.line
+  );
+}
+const singlelineReExport = {
+  test: (node) => isSinglelineReExport(node),
+};
+const undocumentedSinglelineReExport = {
+  test: (node, sourceCode) => isSinglelineReExport(node) && !hasLeadingComment(node, sourceCode),
+};
 const singlelineBinding = {
   test: (node) => isSinglelineBinding(node),
 };
@@ -44,6 +58,12 @@ const paddingRule = createPaddingLineRule(
     // Consecutive single-line bindings form one group at any scope, including
     // module scope. A binding with its own leading comment starts a new group.
     { blankLine: 'any', prev: 'singleline-binding', next: 'undocumented-singleline-binding' },
+    // Consecutive single-line re-exports group the same way.
+    {
+      blankLine: 'any',
+      prev: 'singleline-re-export',
+      next: 'undocumented-singleline-re-export',
+    },
     {
       blankLine: 'any',
       prev: {
@@ -59,6 +79,8 @@ const paddingRule = createPaddingLineRule(
   {
     'singleline-binding': singlelineBinding,
     'undocumented-singleline-binding': undocumentedSinglelineBinding,
+    'singleline-re-export': singlelineReExport,
+    'undocumented-singleline-re-export': undocumentedSinglelineReExport,
   },
 );
 /** Restore structural blank lines with whitespace-only fixes; keep single-line binding groups and overloads grouped. */

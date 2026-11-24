@@ -6,6 +6,6 @@ import type { OxlintConfig } from 'oxlint';
 
 // Required, so projects can spread these into their own config.
 declare const config: OxlintConfig &
-  Required<Pick<OxlintConfig, 'ignorePatterns' | 'overrides' | 'rules'>>;
+  Required<Pick<OxlintConfig, 'ignorePatterns' | 'overrides' | 'plugins' | 'rules'>>;
 
 export default config;

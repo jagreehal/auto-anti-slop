@@ -10,8 +10,16 @@
 // pruned from it.
 
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
+import {
+  createScratch,
+  inProject,
+  parseReport,
+  publishBaseline,
+  readBaseline,
+} from './baseline.mjs';
 
 const agent = process.argv[2];
 let input = {};
@@ -65,41 +73,36 @@ for (let index = 0; index < entries.length; index++) {
   }
 }
 
-// Drop baseline entries for deleted files, so a new file at the same path starts clean.
-const suppressions = `${root}/oxlint-suppressions.json`;
-let recorded;
+/** Shrink each recorded count to what `found` allows, and write the baseline if that changed it. */
+function prune(scratch, found) {
+  const kept = {};
+  const recorded = readBaseline(root) ?? {};
 
-try {
-  recorded = JSON.parse(readFileSync(suppressions, 'utf8'));
-} catch {
-  // Missing or malformed: leave it to Oxlint, which reports the findings regardless.
-}
+  for (const [file, rules] of Object.entries(recorded)) {
+    for (const [rule, { count }] of Object.entries(rules)) {
+      const left = Math.min(count, found(file, rule));
 
-const isObject = (value) => value?.constructor === Object;
-
-// Only prune the shape Oxlint writes, { path: { rule: { count } } }, so a hand-edited or corrupt
-// file is left for Oxlint to report rather than rewritten.
-const isBaseline = (value) =>
-  isObject(value) &&
-  Object.values(value).every(
-    (rules) =>
-      isObject(rules) &&
-      Object.values(rules).every(
-        (entry) => isObject(entry) && Number.isInteger(entry.count) && entry.count > 0,
-      ),
-  );
-
-if (isBaseline(recorded)) {
-  const entries = Object.entries(recorded);
-  const kept = entries.filter(([file]) => existsSync(`${root}/${file}`));
-
-  if (kept.length < entries.length) {
-    try {
-      writeFileSync(suppressions, JSON.stringify(Object.fromEntries(kept), null, 2));
-    } catch {
-      // Read-only: lint anyway; Oxlint ignores entries for files that no longer exist.
+      if (left > 0) {
+        kept[file] ??= {};
+        kept[file][rule] = { count: left };
+      }
     }
   }
+
+  if (!isDeepStrictEqual(kept, recorded)) {
+    publishBaseline(root, scratch, kept);
+  }
+}
+
+// Drop baseline entries for deleted files, so a new file at the same path starts clean.
+try {
+  const isDeleted = (file) => !existsSync(`${root}/${file}`);
+
+  if (Object.keys(readBaseline(root) ?? {}).some((file) => isDeleted(file))) {
+    prune(createScratch(root), (file) => (isDeleted(file) ? 0 : Infinity));
+  }
+} catch {
+  // Read-only: lint anyway; Oxlint ignores entries for files that no longer exist.
 }
 
 if (files.length === 0) {
@@ -108,15 +111,30 @@ if (files.length === 0) {
 
 const oxlint = fileURLToPath(new URL('bin/oxlint', import.meta.resolve('oxlint/package.json')));
 
-const lint = (...args) =>
-  spawnSync(process.execPath, [oxlint, ...args, ...files], { cwd: root, encoding: 'utf8' });
+const run = (args, cwd) =>
+  spawnSync(process.execPath, args, { cwd, encoding: 'utf8', maxBuffer: Infinity });
 
+const lint = () => run([oxlint, ...files], root);
 let result = lint();
 
-// The agent fixed findings recorded in oxlint-suppressions.json: shrink the baseline to match.
+// The agent fixed findings recorded in the baseline: shrink it to match.
 if (/suppressions that do not occur anymore/.test(result.stdout + result.stderr)) {
-  lint('--prune-suppressions');
-  result = lint();
+  try {
+    const scratch = createScratch(root);
+    const paths = files.map((file) => `${root}/${file}`);
+    const reported = run([...inProject, oxlint, '--format=json', ...paths], scratch);
+    const { entries, unrecordable } = parseReport({ ...reported, scratch }, root);
+
+    // A file with a syntax error reports nothing else, though its findings are still there.
+    if (unrecordable.length === 0) {
+      prune(scratch, (file, rule) =>
+        files.includes(file) ? (entries[file]?.[rule]?.count ?? 0) : Infinity,
+      );
+      result = lint();
+    }
+  } catch {
+    // Read-only, or Oxlint failed: report what it said.
+  }
 }
 
 if (result.status === 0) {
@@ -125,6 +143,7 @@ if (result.status === 0) {
 
 const report = `Oxlint found problems in files changed in this session:\n\n${result.stdout}${result.stderr}
 Fix the code rather than disabling rules or running \`oxlint --suppress-all\`.
+Fix the design behind structural errors; don't move code around to silence them.
 \`npx oxlint --fix <file>\` applies the autofixes.`;
 
 // Cursor's followup_message re-prompts the agent, so on a retry it would block again.

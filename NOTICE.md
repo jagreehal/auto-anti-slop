@@ -5,8 +5,8 @@
   with Cloudflare's header keep it.
 - `index.js` adapts its base rules from @nkzw/oxlint-config 3.0.0, under the
   MIT license below.
-- `anti-slop/` adapts dmmulroy/anti-slop. See `anti-slop/LICENSE` and
-  `anti-slop/UPSTREAM.md`.
+- `anti-slop/` is Copyright (c) 2026 Dillon Mulroy, under the MIT license in
+  `anti-slop/LICENSE`, with the changes listed in `anti-slop/UPSTREAM.md`.
 
 ```text
 The MIT License (MIT)
