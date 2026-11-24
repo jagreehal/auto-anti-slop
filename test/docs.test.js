@@ -46,7 +46,7 @@ test('every rule page has a bad example the rule reports and a good one the pres
 
   await writeFile(
     join(project, 'oxlint.config.ts'),
-    "import preset from 'auto-anti-slop';\nimport { defineConfig } from 'oxlint';\n\nexport default defineConfig({ ...preset });\n",
+    "import preset from 'auto-anti-slop';\nimport { defineConfig } from 'oxlint';\n\nexport default defineConfig({ ...preset, rules: { ...preset.rules, 'anti-slop/no-export-all': 'error' } });\n",
   );
   await writeFile(
     join(project, 'tsconfig.json'),

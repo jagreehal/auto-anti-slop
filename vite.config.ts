@@ -7,7 +7,7 @@ import preset from './index.js';
 
 export default defineConfig({
   fmt: {
-    ignorePatterns: ['pnpm-lock.yaml', '.consumer-*'],
+    ignorePatterns: ['pnpm-lock.yaml', '.consumer-*', 'rules/sonarjs.json'],
     singleQuote: true,
     sortImports: {
       newlinesBetween: false,
@@ -20,13 +20,20 @@ export default defineConfig({
     env: { node: true },
     // Lint this repo with its own preset.
     extends: [preset],
-    // Vendored from anti-slop; kept close to upstream rather than restyled.
-    ignorePatterns: ['.consumer-*/', 'anti-slop/'],
+    // `anti-slop/` keeps its own style, and test/examples.test.js lints the examples.
+    ignorePatterns: ['.consumer-*/', 'anti-slop/', 'examples/'],
     options: { typeAware: true, typeCheck: true },
     // Command-line scripts report through the console.
     overrides: [{ files: ['bin/**', 'hooks/**'], rules: { 'no-console': 'off' } }],
   },
   staged: {
     '*': 'vp check --fix',
+  },
+  test: {
+    // The examples hold test files of their own, to lint rather than run.
+    include: ['{anti-slop,rules,test}/**/*.test.js'],
+    // Starting Oxlint is slow on a busy machine.
+    hookTimeout: 60_000,
+    testTimeout: 60_000,
   },
 });

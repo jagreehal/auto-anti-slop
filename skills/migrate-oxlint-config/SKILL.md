@@ -13,8 +13,11 @@ description: Adopt auto-anti-slop in an existing JavaScript or TypeScript projec
    command and CI at `oxlint .`. Keep the type-check command; if the old setup
    ran the compiler during lint, run it separately or set
    `options.typeCheck: true`.
-3. Run `npx auto-anti-slop --baseline`. It writes `oxlint-suppressions.json`
-   with the current findings, so `oxlint .` passes.
+3. If setup created the config and wrote `oxlint-suppressions.json`, go to the
+   next step. Otherwise run `npx auto-anti-slop --baseline`. It replaces the file
+   with the current findings, so `oxlint .` passes. If setup stops on a syntax
+   error, fix the error and run the command again. If it stops because a config
+   changed while it ran, run it again.
 4. Commit the dependency, config, lint-command changes and
    `oxlint-suppressions.json` together, with no code fixes.
 
@@ -29,7 +32,9 @@ description: Adopt auto-anti-slop in an existing JavaScript or TypeScript projec
 2. Pick a rule. Delete its entries from `oxlint-suppressions.json`, then run
    `oxlint .` to see every finding.
 3. If the rule fits the project, fix the findings until `oxlint .` passes, run
-   the affected tests and type checks, and commit.
+   the affected tests and type checks, and commit. For cycles and exposed
+   fields, show the user a sketch of the modules before and after, then fix
+   related findings together.
 4. If it doesn't fit, set the rule to `'off'` in the project config with a
    comment giving the reason, scoped to the files that need it where possible.
    Flag rules the team requires for maintainer review.
