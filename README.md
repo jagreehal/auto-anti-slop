@@ -95,8 +95,8 @@ passes from the start. Commit the `oxlint-suppressions.json` it writes.
 - If you have a config, add the preset and run the same command.
 - To see every finding, delete the file.
 - Fix syntax errors first. Setup stops on them before it writes anything.
-- If a config changes while setup lints, setup stops and asks you to run it
-  again.
+- If a config, or a file it loads, changes while setup lints, setup stops and
+  asks you to run it again.
 
 See [Existing projects](#existing-projects) for how the baseline works.
 
@@ -203,7 +203,9 @@ left out the ones that flagged idiomatic code. What you'll notice day to day:
 many findings each file has for each rule, replacing any existing baseline. It
 lints the files `npx oxlint` would, with the same configs, and swaps the new
 file in when it finishes, so a run that stops early keeps your old baseline. The
-file keeps its permissions, and a symlink stays a symlink. If you have a config,
+file keeps its permissions, and a symlink stays a symlink. A baseline with other
+hard links, another owner, or an ACL that can't be copied is rewritten in place
+instead, as is any baseline on a system without `cp`. If you have a config,
 it must load the preset's plugin and enable at least half as many error-level
 rules as the preset. From then on:
 

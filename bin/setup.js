@@ -19,11 +19,12 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { availableParallelism, constants } from 'node:os';
-import { dirname, join, relative } from 'node:path';
+import { dirname, join, relative, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { isDeepStrictEqual } from 'node:util';
 import {
   baseline,
+  checkScan,
   createBaseline,
   createScratch,
   inProject,
@@ -87,18 +88,64 @@ const findConfig = () => configs.find((file) => existsSync(file));
 
 const oxlint = fileURLToPath(new URL('bin/oxlint', import.meta.resolve('oxlint/package.json')));
 
-// Resolve the config as well as reading it, because it can import other files. The modified time
-// shows a config rewritten with the same content.
+const configModules = import.meta.resolve('../hooks/config-modules.mjs');
+
+const readSource = (file) => {
+  try {
+    return readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
+};
+
+// Remove what a pattern matches, except inside a JSON string.
+const removeOutsideStrings = (text, pattern) =>
+  text.replaceAll(new RegExp(String.raw`"(?:[^"\\]|\\.)*"|${pattern}`, 'g'), (token) =>
+    token.startsWith('"') ? token : '',
+  );
+
+// The paths a JSON config extends. Comments and trailing commas go first.
+function extendsOf(file) {
+  const uncommented = removeOutsideStrings(readSource(file), String.raw`\/\/.*|\/\*[\s\S]*?\*\/`);
+  const json = removeOutsideStrings(uncommented, String.raw`,(?=\s*[\]}])`);
+
+  try {
+    const { extends: paths } = JSON.parse(json);
+
+    return Array.isArray(paths) ? paths : [];
+  } catch {
+    return [];
+  }
+}
+
+// Oxlint reads the files a config extends itself, where the preload can't see them.
+function readExtended(file, found = {}) {
+  for (const path of extendsOf(file)) {
+    const target = resolvePath(dirname(file), String(path));
+
+    if (!(target in found)) {
+      found[target] = statSync(target, { throwIfNoEntry: false })?.mtimeMs;
+      readExtended(target, found);
+    }
+  }
+
+  return found;
+}
+
+// Resolve the config as well as reading it, because it can import other files. Modified times
+// show a config, or a file it loads, rewritten with the same content.
 function readConfig(file, ...args) {
   return new Promise((resolve) => {
     execFile(
       process.execPath,
-      [oxlint, '--print-config', ...args],
+      ['--import', configModules, oxlint, '--print-config', ...args],
       { maxBuffer: Infinity },
-      (error, resolved) => {
+      (error, resolved, stderr) => {
+        const [, modules = '{}'] = /^config-modules (.*)$/m.exec(stderr) ?? [];
+        const loaded = { ...JSON.parse(modules), ...readExtended(file) };
         const modified = statSync(file, { throwIfNoEntry: false })?.mtimeMs;
 
-        resolve({ file, modified, resolved, source: readFileSync(file, 'utf8') });
+        resolve({ file, loaded, modified, resolved, source: readSource(file) });
       },
     );
   });
@@ -226,6 +273,8 @@ function findNestedDirectories(scratch) {
 }
 
 function report(scratch) {
+  checkScan(oxlint, scratch);
+
   return new Promise((resolve, reject) => {
     const args = ['--format=json', ...scope, process.cwd()];
     child = spawn(process.execPath, [...inProject, oxlint, ...args], { cwd: scratch });
@@ -252,13 +301,38 @@ function stopIfConfigChanged(before, current) {
   }
 }
 
-// Lists the directories again, to include any created since.
+// Lists the directories again, to include any created since. Returns the configs it read.
 async function stopIfAnyConfigChanged(scratch, nested) {
-  stopIfConfigChanged(config, await readRootConfig());
+  const root = await readRootConfig();
+  stopIfConfigChanged(config, root);
   const current = await readNestedConfigs(findNestedDirectories(scratch));
 
   for (const file of new Set([...nested.keys(), ...current.keys()])) {
     stopIfConfigChanged(nested.get(file), current.get(file));
+  }
+
+  return [...(root ? [root] : []), ...current.values()];
+}
+
+// Reading every config again takes a while. A last look, just before the baseline is written.
+function stopIfModified(scratch, read) {
+  const known = new Set(read.map(({ file }) => file));
+
+  const created = ['.', ...findNestedDirectories(scratch)]
+    .flatMap((dir) => configs.map((config) => join(dir, config)))
+    .find((file) => !known.has(file) && existsSync(file));
+
+  if (created !== undefined) {
+    stopIfConfigChanged(undefined, { file: created });
+  }
+
+  for (const { file, loaded, modified } of read) {
+    for (const [path, before] of Object.entries({ ...loaded, [file]: modified })) {
+      if (statSync(path, { throwIfNoEntry: false })?.mtimeMs !== before) {
+        console.error(`${file}: changed during setup. Run setup again to use it.`);
+        process.exit(1);
+      }
+    }
   }
 }
 
@@ -284,13 +358,14 @@ async function recordBaseline() {
     const reporting = report(scratch);
     console.log(`${baseline}: recording existing findings`);
     result = await reporting;
-    await stopIfAnyConfigChanged(scratch, nested);
-
+    const read = await stopIfAnyConfigChanged(scratch, nested);
     const { entries, unrecordable } = parseReport(result, process.cwd());
 
     if (unrecordable.length > 0) {
       throw new Error(unrecordable.join('\n'));
     }
+
+    stopIfModified(scratch, read);
 
     if (Object.keys(entries).length > 0 || existsSync(baseline)) {
       (replace ? publishBaseline : createBaseline)(process.cwd(), scratch, entries);
@@ -320,8 +395,17 @@ if (firstSetup || replace) {
 
 if (existing === undefined) {
   stopIfConfigChanged(config, await readRootConfig());
-  // Fails rather than replace a config that has appeared since.
-  writeFileSync('oxlint.config.ts', defaultConfig, { flag: 'wx' });
+
+  try {
+    writeFileSync('oxlint.config.ts', defaultConfig, { flag: 'wx' });
+  } catch (error) {
+    if (error.code !== 'EEXIST') {
+      throw error;
+    }
+
+    stopIfConfigChanged(config, { file: 'oxlint.config.ts' });
+  }
+
   console.log('oxlint.config.ts: created');
 }
 

@@ -14,11 +14,25 @@ const scratch = process.cwd();
 
 // Workers and child processes inherit this preload, and start in the project.
 if (isMainThread && basename(scratch).startsWith('.oxlint-baseline-')) {
+  const project = dirname(scratch);
+  const { parse } = JSON;
+
+  // Oxlint's native code tells plugins the directory it started in, as `context.cwd`.
+  JSON.parse = (text, reviver) => {
+    const value = parse(text, reviver);
+
+    if (value?.cwd === scratch) {
+      value.cwd = project;
+    }
+
+    return value;
+  };
+
   registerHooks({
     resolve(specifier, context, nextResolve) {
       // Only the program itself has no parent.
       if (specifier.startsWith('file:') && context.parentURL !== undefined) {
-        process.chdir(dirname(scratch));
+        process.chdir(project);
       }
 
       return nextResolve(specifier, context);
