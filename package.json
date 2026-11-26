@@ -1,6 +1,6 @@
 {
   "name": "auto-anti-slop",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Oxlint preset that catches AI-agent slop: strict type safety, complexity limits, anti-slop rules, and lint hooks for Claude Code, Codex and Cursor.",
   "keywords": [
     "agents",
